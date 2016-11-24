@@ -27,14 +27,55 @@ import logging
 SK_CLIENT = None
 STDSCR = None
 
-class VesselDetail(object):
-    """vessel detail page"""
+class Page(object):
+    """base class for a page in the ui
+    """
 
     def __init__(self, max_y, max_x):
         self.max_y = max_y
         self.max_x = max_x
+        self.pad = None
+        self.pad_y = 0
+        self.pad_off = 0
+
+    @property
+    def name(self):
+        """return the page title - override me"""
+        return "Unnamed Page"
+
+    def update_pad_size(self, pad_y):
+        """check pad size and update pad if neccesary"""
+        if self.pad_y != pad_y:
+            self.pad_y = pad_y
+            self.pad = curses.newpad(self.pad_y, self.max_x)
+
+    def term_resized(self, new_y, new_x):
+        """handle terminal resize"""
+        self.pad = curses.newpad(new_y, new_x)
+        self.max_y = new_y
+        self.max_x = new_x
+
+    def refresh(self, start_y, start_x, stop_y, stop_x):
+        """refresh the page"""
+        self.pad.refresh(
+            self.pad_off, 0,
+            start_y, start_x,
+            stop_y, stop_x)
+
+    def command(self, char):
+        """handle additional page specific commands"""
+        if char == curses.KEY_LEFT or char == ord('h'):
+            return ('VESSEL_BROWSER', None)
+        return (None, None)
+
+
+class VesselDetail(Page):
+    """vessel detail page"""
+
+    def __init__(self, max_y, max_x):
+        Page.__init__(self, max_y, max_x)
         self.vessel = None
-        self.pad = curses.newpad(self.max_y, self.max_x)
+        self.update_pad_size(6)
 
     def set_vessel(self, vessel):
         """Set the Vessel to display detail for"""
@@ -44,12 +85,6 @@ class VesselDetail(object):
     def name(self):
         """return the page title"""
         return "Vessel Detail {}".format(self.vessel)
-
-    def term_resized(self, new_y, new_x):
-        """handle terminal resize"""
-        self.pad = curses.newpad(new_y, new_x)
-        self.max_y = new_y
-        self.max_x = new_x
 
     def draw(self):
         """draw the page"""
@@ -64,28 +99,14 @@ class VesselDetail(object):
             self.pad.addstr(row, 0, "{}: {}".format(key, data))
             row += 1
 
-    def refresh(self, start_y, start_x, stop_y, stop_x):
-        """refresh the page"""
-        self.pad.refresh(
-            0, 0,
-            start_y, start_x,
-            stop_y, stop_x)
 
-    def command(self, char):
-        """handle additiona page specific commands"""
-        if char == curses.KEY_LEFT or char == ord('h'):
-            return ('VESSEL_BROWSER', None)
-        return (None, None)
-
-class TargetDetail(object):
+class TargetDetail(Page):
     """target detail page"""
 
     def __init__(self, max_y, max_x):
-        self.max_y = max_y
-        self.max_x = max_x
+        Page.__init__(self, max_y, max_x)
         self.vessel = None
         self.path = None
-        self.pad = curses.newpad(self.max_y, self.max_x)
 
     def set_target(self, vessel, path):
         """Set the Vessel and path of property to display detail for"""
@@ -97,40 +118,23 @@ class TargetDetail(object):
         """return the page title"""
         return "Target Detail {}.{}".format(self.vessel, self.path)
 
-    def term_resized(self, new_y, new_x):
-        """handle terminal resize"""
-        self.pad = curses.newpad(new_y, new_x)
-        self.max_y = new_y
-        self.max_x = new_x
-
     def draw(self):
         """draw the page"""
-        self.pad.erase()
         meta = SK_CLIENT.data.get_prop_meta(self.path)
         meta_pp = json.dumps(meta, indent=2, sort_keys=True)
-        self.pad.addstr(0, 0, "meta={}".format(meta_pp))
         prop = SK_CLIENT.data.get_vessel_prop(self.path, self.vessel)
         prop_pp = json.dumps(prop, indent=2, sort_keys=True)
+        self.update_pad_size(
+            4 + meta_pp.count('\n') + prop_pp.count('\n')
+            )
+        self.pad.erase()
+        self.pad.addstr(0, 0, "meta={}".format(meta_pp))
         self.pad.addstr(meta_pp.count('\n')+2, 0, "prop={}".format(prop_pp))
 
-    def refresh(self, start_y, start_x, stop_y, stop_x):
-        """refresh the page"""
-        self.pad.refresh(
-            0, 0,
-            start_y, start_x,
-            stop_y, stop_x)
 
-    def command(self, char):
-        """handle additional page specific commands"""
-        if char == curses.KEY_LEFT or char == ord('h'):
-            return ('VESSEL_BROWSER', None)
-        return (None, None)
-
-class VesselBrowser(object):
+class VesselBrowser(Page):
     """vessel browser page"""
     def __init__(self, max_y, max_x):
-        self.max_y = max_y
-        self.max_x = max_x
         self.row_index = []
         self.row_count = 0
 
@@ -140,9 +144,9 @@ class VesselBrowser(object):
             for target in sorted(SK_CLIENT.data.get_targets(vessel)):
                 self.row_count += 1
                 self.row_index.append(('target', vessel, target))
-        self.display_pad = curses.newpad(self.row_count, self.max_x)
-        self.display_pad_pos = 0 # current selected position
-        self.display_pad_off = 0 # current display offset
+
+        Page.__init__(self, max_y, max_x)
+        self.pad_pos = 0 # current selected position
         self.sel_attr = curses.A_REVERSE
 
     @property
@@ -152,27 +156,28 @@ class VesselBrowser(object):
 
     def term_resized(self, new_y, new_x):
         """handle terminal resize"""
-        self.display_pad = curses.newpad(self.row_count, new_x)
+        self.pad = curses.newpad(self.row_count, new_x)
         self.max_y = new_y
         self.max_x = new_x
 
     def draw(self):
         """draw to page"""
-        self.display_pad.erase()
+        self.update_pad_size(len(self.row_index))
+        self.pad.erase()
         for row in range(0, len(self.row_index)):
             if row >= self.row_count:
-                logging.error("Overflowed display_pad at row: {}".format(row))
+                logging.error("Overflowed pad at row: {}".format(row))
                 break
             if self.row_index[row][0] == 'vessel':
                 vessel = self.row_index[row][1]
-                self.display_pad.addstr(row, 0, "vessel: {}".format(vessel))
+                self.pad.addstr(row, 0, "vessel: {}".format(vessel))
             elif self.row_index[row][0] == 'target':
                 vessel = self.row_index[row][1]
                 path = self.row_index[row][2]
                 datum = SK_CLIENT.data.get_vessel_prop_datum(path, vessel)
                 mid_x = self.max_x/2
-                self.display_pad.addstr(row, 2, datum.display_path())
-                self.display_pad.addstr(row, mid_x, datum.display_value(
+                self.pad.addstr(row, 2, datum.display_path())
+                self.pad.addstr(row, mid_x, datum.display_value(
                     convert_units=[
                         ('m', 'ft'),
                         ('m/s', 'kn'),
@@ -184,56 +189,49 @@ class VesselBrowser(object):
                     "Unknown row in row_index: {!r}".format(self.row_index[row])
                     )
 
-        self.display_pad.chgat(self.display_pad_pos, 0, self.sel_attr)
+        self.pad.chgat(self.pad_pos, 0, self.sel_attr)
 
         # handle pad scrolling
         mid_y = self.max_y/2
         if self.row_count > self.max_y:
 
-            if self.display_pad_pos < mid_y:
-                self.display_pad_off = 0
+            if self.pad_pos < mid_y:
+                self.pad_off = 0
 
-            elif (self.display_pad_pos >= mid_y and
-                  self.display_pad_pos <= self.row_count-mid_y):
+            elif (self.pad_pos >= mid_y and
+                  self.pad_pos <= self.row_count-mid_y):
 
-                self.display_pad_off = self.display_pad_pos-mid_y
+                self.pad_off = self.pad_pos-mid_y
 
             else:
-                self.display_pad_off = self.row_count-self.max_y
-
-    def refresh(self, start_y, start_x, stop_y, stop_x):
-        """refresh the page"""
-        self.display_pad.refresh(
-            self.display_pad_off, 0,
-            start_y, start_x,
-            stop_y, stop_x)
+                self.pad_off = self.row_count-self.max_y
 
     def command(self, char):
         """handle page specific commands"""
         if char == curses.KEY_DOWN or char == ord('j'):
-            if self.display_pad_pos < self.row_count-1:
-                self.display_pad_pos += 1
+            if self.pad_pos < self.row_count-1:
+                self.pad_pos += 1
         elif char == curses.KEY_UP or char == ord('k'):
-            if self.display_pad_pos > 0:
-                self.display_pad_pos -= 1
+            if self.pad_pos > 0:
+                self.pad_pos -= 1
         elif char == curses.KEY_NPAGE or char == ord('J'):
-            if self.display_pad_pos < self.row_count-((self.max_y)/2):
-                self.display_pad_pos += (self.max_y)/2
+            if self.pad_pos < self.row_count-((self.max_y)/2):
+                self.pad_pos += (self.max_y)/2
             else:
-                self.display_pad_pos = self.row_count-1
+                self.pad_pos = self.row_count-1
         elif char == curses.KEY_PPAGE or char == ord('K'):
-            if self.display_pad_pos > ((self.max_y)/2):
-                self.display_pad_pos -= (self.max_y)/2
+            if self.pad_pos > ((self.max_y)/2):
+                self.pad_pos -= (self.max_y)/2
             else:
-                self.display_pad_pos = 0
+                self.pad_pos = 0
         elif char == curses.KEY_RIGHT or char == ord('l'):
-            if self.row_index[self.display_pad_pos][0] == 'vessel':
-                vessel = self.row_index[self.display_pad_pos][1]
+            if self.row_index[self.pad_pos][0] == 'vessel':
+                vessel = self.row_index[self.pad_pos][1]
                 return ('VESSEL_DETAIL', vessel)
 
-            if self.row_index[self.display_pad_pos][0] == 'target':
-                vessel = self.row_index[self.display_pad_pos][1]
-                path = self.row_index[self.display_pad_pos][2]
+            if self.row_index[self.pad_pos][0] == 'target':
+                vessel = self.row_index[self.pad_pos][1]
+                path = self.row_index[self.pad_pos][2]
                 return ('TARGET_DETAIL', (vessel, path))
         return (None, None)
 
