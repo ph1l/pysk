@@ -1,6 +1,6 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 #
-#   python-signalk-client is a python client library for SignalK
+#   pysk is a ncurses client for SignalK
 #   Copyright (C) 2016  Philip J Freeman <elektron@halo.nu>
 #
 #   This program is free software: you can redistribute it and/or modify
