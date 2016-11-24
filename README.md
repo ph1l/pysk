@@ -1,6 +1,6 @@
 # pysk
 
-ncurses terminal app to display streaming data from a signalk server.
+ncurses terminal app to display streaming data from a [Signal-K][1] Server
 
 # Requirements
 
@@ -32,5 +32,5 @@ Enable a debug log:
 
 ## References
 
-[r-1]:https://github.com/ph1l/python-signalk-client
-
+[1]: http://signalk.org
+[r-1]: https://github.com/ph1l/python-signalk-client
