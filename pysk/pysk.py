@@ -182,6 +182,7 @@ class VesselBrowser(Page):
                         ('m', 'ft'),
                         ('m/s', 'kn'),
                         ('rad', 'deg'),
+                        ('K', 'F'),
                         ]
                     ))
             else:
