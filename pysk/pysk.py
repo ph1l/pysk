@@ -237,9 +237,19 @@ class VesselBrowser(Page):
                 return ('TARGET_DETAIL', (vessel, path))
         return (None, None)
 
+def interface_console():
+    """console ui"""
+
+    import time
+
+    while True:
+
+        logging.info("- MARK -")
+        time.sleep(60)
+
 
 def interface_curses(win):
-    """main ui function for pysk"""
+    """curses ui"""
 
     # Initialize curses
 
@@ -344,6 +354,12 @@ are welcome to redistribute it under certain conditions.
         )
 
     argparser.add_argument(
+        '-i', '--interface',
+        default="curses",
+        help='ui interface type (console, curses)',
+        )
+
+    argparser.add_argument(
         '-D', '--log-file',
         default=None,
         help='log to file',
@@ -365,11 +381,17 @@ are welcome to redistribute it under certain conditions.
 
     SK_CLIENT = Client(args.server)
 
-    logging.debug("Going curses...")
 
-    curses.wrapper(interface_curses)
+    if args.interface == "console":
+        logging.debug("interface console...")
+        interface_console()
+    elif args.interface == "curses":
+        logging.debug("interface curses...")
+        curses.wrapper(interface_curses)
+    else:
+        logging.error("unknown interface: {}".format(args.interface))
 
-    logging.debug("Back from curses...")
+    logging.debug("Back from interface...")
 
     SK_CLIENT.close()
 
