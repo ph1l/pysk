@@ -4,8 +4,7 @@ ncurses terminal app to display streaming data from a [Signal-K][1] Server
 
 ## Install
 
-    python ./setup.py build
-    sudo python ./setup.py install
+    sudo easy_install pysk
 
 ## Usage
 
