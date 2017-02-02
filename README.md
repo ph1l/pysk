@@ -2,11 +2,6 @@
 
 ncurses terminal app to display streaming data from a [Signal-K][1] Server
 
-# Requirements
-
-the [python-signalk-client][r-1] library is required but not available in
-the Python Package Index. Install it first.
-
 ## Install
 
     python ./setup.py build
