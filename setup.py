@@ -15,8 +15,8 @@ setup(
     },
     author = "Philip J Freeman",
     author_email = "elektron@halo.nu",
-    description = "",
+    description = "client application to display streaming data from a signalk server via curses and other user interfaces",
     license = "GPL3",
-    keywords = "",
+    keywords = "signalk curses",
     url = "https://github.com/ph1l/pysk",
 )
