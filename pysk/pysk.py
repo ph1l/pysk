@@ -90,14 +90,15 @@ class VesselDetail(Page):
         """draw the page"""
         self.pad.erase()
         row = 0
-        for key in ('mmsi', 'url', 'uuid', 'name', 'port', 'flag'):
-            data = ''
+        for key in ('name', 'mmsi', 'uuid', 'url', 'port', 'flag'):
+            data = None
             try:
-                data = SK_CLIENT.data.get_vessel_prop(key, self.vessel)
+                data = self.vessel.get_datum(key)
             except KeyError:
                 pass
-            self.pad.addstr(row, 0, "{}: {}".format(key, data))
-            row += 1
+            if data != None:
+                self.pad.addstr(row, 0, "{}: {}".format(key, data.display_value()))
+                row += 1
 
 
 class TargetDetail(Page):
@@ -116,13 +117,13 @@ class TargetDetail(Page):
     @property
     def name(self):
         """return the page title"""
-        return "Target Detail {}.{}".format(self.vessel, self.path)
+        return "Target Detail {}.{}".format(str(self.vessel), self.path)
 
     def draw(self):
         """draw the page"""
-        meta = SK_CLIENT.data.get_prop_meta(self.path)
+        meta = self.vessel.data.get_prop_meta(self.path)
         meta_pp = json.dumps(meta, indent=2, sort_keys=True)
-        prop = SK_CLIENT.data.get_vessel_prop(self.path, self.vessel)
+        prop = self.vessel.get_prop(self.path)
         prop_pp = json.dumps(prop, indent=2, sort_keys=True)
         self.update_pad_size(
             4 + meta_pp.count('\n') + prop_pp.count('\n')
@@ -141,7 +142,7 @@ class VesselBrowser(Page):
         for vessel in sorted(SK_CLIENT.data.get_vessels()):
             self.row_index.append(('vessel', vessel))
             self.row_count += 1
-            for target in sorted(SK_CLIENT.data.get_targets(vessel)):
+            for target in vessel.get_targets():
                 self.row_count += 1
                 self.row_index.append(('target', vessel, target))
 
@@ -170,11 +171,11 @@ class VesselBrowser(Page):
                 break
             if self.row_index[row][0] == 'vessel':
                 vessel = self.row_index[row][1]
-                self.pad.addstr(row, 0, "vessel: {}".format(vessel))
+                self.pad.addstr(row, 0, str(vessel))
             elif self.row_index[row][0] == 'target':
                 vessel = self.row_index[row][1]
                 path = self.row_index[row][2]
-                datum = SK_CLIENT.data.get_vessel_prop_datum(path, vessel)
+                datum = vessel.get_datum(path)
                 mid_x = self.max_x/2
                 self.pad.addstr(row, 2, datum.display_path())
                 self.pad.addstr(row, mid_x, datum.display_value(
