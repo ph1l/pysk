@@ -28,6 +28,7 @@ from signalk_client.client import Client
 INTERFACE_PLUGINS = (
     'console',
     'curses',
+    'espeak',
     'papirus',
     )
 
