@@ -176,8 +176,10 @@ class VesselBrowser(Page):
                 datum = vessel.get_datum(path)
                 mid_x = self.max_x/2
                 self.pad.addstr(row, 2, datum.display_path())
-                self.pad.addstr(row, mid_x, datum.display_value(
-                    convert_units=CONVERSIONS))
+                display_value = datum.display_value(convert_units=CONVERSIONS)
+                if len(display_value) > mid_x:
+                    display_value = display_value[:mid_x-4]+"..."
+                self.pad.addstr(row, mid_x, display_value)
             else:
                 logging.error(
                     "Unknown row in row_index: {!r}".format(self.row_index[row])
