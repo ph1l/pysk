@@ -22,6 +22,7 @@ import logging
 
 # Global Variables
 SK_CLIENT = None
+CONVERSIONS = None
 STDSCR = None
 
 class Page(object):
@@ -176,13 +177,7 @@ class VesselBrowser(Page):
                 mid_x = self.max_x/2
                 self.pad.addstr(row, 2, datum.display_path())
                 self.pad.addstr(row, mid_x, datum.display_value(
-                    convert_units=[
-                        ('m', 'ft'),
-                        ('m/s', 'kn'),
-                        ('rad', 'deg'),
-                        ('K', 'F'),
-                        ]
-                    ))
+                    convert_units=CONVERSIONS))
             else:
                 logging.error(
                     "Unknown row in row_index: {!r}".format(self.row_index[row])
@@ -308,9 +303,12 @@ def interface_curses(win):
                 target_detail.set_target(vessel, path)
                 current_pad = target_detail
 
+
 def interface_main(*args, **kwargs):
     """console ui"""
 
     global SK_CLIENT
+    global CONVERSIONS
     SK_CLIENT = kwargs['sk_client']
+    CONVERSIONS = kwargs['conversions']
     curses.wrapper(interface_curses)

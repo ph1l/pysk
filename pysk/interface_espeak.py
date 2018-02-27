@@ -33,77 +33,54 @@ def interface_main(*args, **kwargs):
     espeak.set_voice('en-us')
     espeak.synth('Welcome to pysk. This program comes with ABSOLUTELY NO WARRANTY.')
 
-    SK_CLIENT = kwargs['sk_client']
-    vessel_self = SK_CLIENT.data.get_self()
+    sk_client = kwargs['sk_client']
+    modes = kwargs['modes']
+    conversions = kwargs['conversions']
 
-    last_speedOverGround_value = None
-    last_speedOverGround_timestamp = 0.0
-    last_speedThroughWater_value = None
-    last_speedThroughWater_timestamp = 0.0
-    last_depth_value = None
-    last_depth_timestamp = 0.0
+    vessel_self = sk_client.data.get_self()
+
+    data = {
+        'speed': {
+            'navigation.speedOverGround': {
+                'name': "Ground Speed",
+                'last_value': None,
+                'last_timestamp': 0.0,
+                },
+            'navigation.speedThroughWater': {
+                'name': "Water Speed",
+                'last_value': None,
+                'last_timestamp': 0.0,
+                },
+            },
+        'depth': {
+            'environment.depth.belowTransducer': {
+                'name': "Depth",
+                'last_value': None,
+                'last_timestamp': 0.0,
+                },
+            },
+        }
 
     while True:
 
         now = time.time()
         messages = []
 
-        # speedOverGround
-        try:
-            speedOverGround = vessel_self.get_datum('navigation.speedOverGround')
-        except:
-            speedOverGround = None
-
-        next_speedOverGround_value = "{:.1f}".format(speedOverGround.value)
-        if (
-            speedOverGround != None and
-            now > last_speedOverGround_timestamp + min_delay_timeout and
-            (
-                next_speedOverGround_value != last_speedOverGround_value or
-                now > last_speedOverGround_timestamp + max_delay_timeout
-            )
-           ):
-            messages.append("Ground Speed, {}".format(next_speedOverGround_value))
-            last_speedOverGround_value = next_speedOverGround_value
-            last_speedOverGround_timestamp = now
-
-        # speedThroughWater
-        try:
-            speedThroughWater = vessel_self.get_datum('navigation.speedThroughWater')
-        except:
-            speedThroughWater = None
-
-        next_speedThroughWater_value = "{:.1f}".format(speedThroughWater.value)
-        if (
-            speedThroughWater != None and
-            now > last_speedThroughWater_timestamp + min_delay_timeout and
-            (
-                next_speedThroughWater_value != last_speedThroughWater_value or
-                now > last_speedThroughWater_timestamp + max_delay_timeout
-            )
-           ):
-            messages.append("Water Speed, {}".format(next_speedThroughWater_value))
-            last_speedThroughWater_value = next_speedThroughWater_value
-            last_speedThroughWater_timestamp = now
-
-        # depth.belowTransducer
-        try:
-            depth = vessel_self.get_datum('environment.depth.belowTransducer')
-        except:
-            depth = None
-
-        next_depth_value = "{:.1f}".format(depth.value)
-        if (
-            depth != None and
-            now > last_depth_timestamp + min_delay_timeout and
-            (
-                next_depth_value != last_depth_value or
-                now > last_depth_timestamp + max_delay_timeout
-            )
-           ):
-            messages.append("Depth, {}".format(next_depth_value))
-            last_depth_value = next_depth_value
-            last_depth_timestamp = now
+        for mode in data.keys():
+            if 'all' in modes or mode in modes:
+                for datum in data[mode].keys():
+                    try:
+                        d = vessel_self.get_datum(datum)
+                        next_value = d.display_value(convert_units=conversions, abbreviate_units=False)
+                    except:
+                        next_value = "unknown"
+                    if (now > data[mode][datum]['last_timestamp'] + min_delay_timeout and
+                        (next_value != data[mode][datum]['last_value'] or
+                         now > data[mode][datum]['last_timestamp'] + max_delay_timeout)
+                       ):
+                        messages.append("{}, {}".format(data[mode][datum]['name'], next_value))
+                        data[mode][datum]['last_value'] = next_value
+                        data[mode][datum]['last_timestamp'] = now
 
         for message in messages:
             logging.info("say message: {}".format(message))

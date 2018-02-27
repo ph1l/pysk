@@ -32,6 +32,14 @@ INTERFACE_PLUGINS = (
     'papirus',
     )
 
+INTERFACE_MODES = (
+    'all',
+    'overview',
+    'wind',
+    'speed',
+    'depth',
+)
+
 def call_interface_plugin(name, *args, **kwargs):
     plugin = importlib.import_module("pysk.interface_%s" % name)
     plugin.interface_main(*args, **kwargs)
@@ -64,9 +72,21 @@ are welcome to redistribute it under certain conditions.
         )
 
     argparser.add_argument(
+        '-m', '--modes',
+        default="ALL",
+        help='list of display modes ({})'.format(", ".join(INTERFACE_MODES)),
+        )
+
+    argparser.add_argument(
         '-i', '--interface',
         default="curses",
         help='ui interface type ({})'.format(", ".join(INTERFACE_PLUGINS)),
+        )
+
+    argparser.add_argument(
+        '-u', '--units',
+        default="si",
+        help='units (si or us)',
         )
 
     argparser.add_argument(
@@ -89,12 +109,41 @@ are welcome to redistribute it under certain conditions.
         stream=log_stream,
         )
 
-    sk_client = Client(args.server)
+    modes=[]
+    if args.modes.find(",") > -1:
+        for mode in args.modes.split(","):
+            if mode.lower() in INTERFACE_MODES:
+                modes.append(mode.lower())
+            else:
+                logging.error("Unknown Mode: {}, ignoring...".format(mode))
+    else:
+        if args.modes.lower() in INTERFACE_MODES:
+            modes.append(args.modes.lower())
+        else:
+            logging.error("Unknown Mode: {}, ignoring...".format(args.modes))
 
+    if args.units == "si":
+        conversions = []
+
+    elif args.units == "us":
+        conversions = [
+                            ('m', 'ft'),
+                            ('m/s', 'kn'),
+                            ('rad', 'deg'),
+                            ('K', 'F'),
+                      ]
+
+
+    sk_client = Client(args.server)
 
     if args.interface in INTERFACE_PLUGINS:
         logging.debug("loading interface plugin: {}...".format(args.interface))
-        call_interface_plugin(args.interface, sk_client=sk_client)
+        call_interface_plugin(
+            args.interface,
+            sk_client=sk_client,
+            modes=modes,
+            conversions=conversions,
+            )
     else:
         logging.error("unknown interface: {}".format(args.interface))
 

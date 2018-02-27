@@ -6,7 +6,7 @@ setup(
     version = "0.1.0",
     packages = find_packages(),
     install_requires = [
-        "signalk_client>=0.2,<0.3",
+        "signalk_client>=0.2.2,<0.3",
         ],
     entry_points={
         'console_scripts': [
