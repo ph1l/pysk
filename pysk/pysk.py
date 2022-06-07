@@ -58,7 +58,7 @@ class Page(object):
     def refresh(self, start_y, start_x, stop_y, stop_x):
         """refresh the page"""
         self.pad.refresh(
-            self.pad_off, 0,
+            int(self.pad_off), 0,
             start_y, start_x,
             stop_y, stop_x)
 
@@ -178,7 +178,7 @@ class VesselBrowser(Page):
                 datum = vessel.get_datum(path)
                 mid_x = self.max_x/2
                 self.pad.addstr(row, 2, datum.display_path())
-                self.pad.addstr(row, mid_x, datum.display_value(
+                self.pad.addstr(row, int(mid_x), datum.display_value(
                     convert_units=[
                         ('m', 'ft'),
                         ('m/s', 'kn'),
@@ -318,11 +318,11 @@ def main():
 
     from signalk_client.client import Client
 
-    print """
+    print("""
 python-signalk-client  Copyright (C) 2016  Philip J Freeman <elektron@halo.nu>
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, and you
 are welcome to redistribute it under certain conditions.
-"""
+""")
 
     global SK_CLIENT
 
